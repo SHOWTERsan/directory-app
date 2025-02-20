@@ -21,12 +21,3 @@
     </main>
   </div>
 </template>
-
-<script setup lang="ts">
-import { onMounted } from 'vue'
-import { apiClient } from './logic/api-client'
-
-onMounted(async () => {
-  await apiClient.initialize();
-});
-</script>

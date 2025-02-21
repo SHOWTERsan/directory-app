@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
-import type {Employee} from '../domain/Employee.ts'
-import type {Department} from '../domain/Department.ts'
-import type {Profession} from '../domain/Profession.ts'
-import {EmployeeService} from '../services/employee-service.ts'
-import {DepartmentService} from "../services/department-service.ts"
-import {ProfessionService} from '../services/profession-service.ts'
+import { onMounted, ref } from 'vue'
+import type { Employee } from '../domain/Employee.ts'
+import type { Department } from '../domain/Department.ts'
+import type { Profession } from '../domain/Profession.ts'
+import { EmployeeService } from '../services/employee-service.ts'
+import { DepartmentService } from '../services/department-service.ts'
+import { ProfessionService } from '../services/profession-service.ts'
 
 const employeeService = new EmployeeService()
 const departmentService = new DepartmentService()
@@ -15,17 +15,19 @@ const employees = ref<Employee[]>([])
 const showForm = ref(false)
 const editingEmployee = ref<Employee | null>(null)
 const loading = ref(false)
-
 const departments = ref<Department[]>([])
 const professions = ref<Profession[]>([])
 
-
-const newEmployee: Employee = {
-  fullName: '',
-  professionId: 0,
-  departmentId: 0,
-  notes: ''
+function createNewEmployee(): Employee {
+  return {
+    fullName: '',
+    professionId: 0,
+    departmentId: 0,
+    notes: ''
+  }
 }
+
+const formEmployee = ref<Employee>(createNewEmployee())
 
 async function loadEmployees() {
   loading.value = true
@@ -42,9 +44,11 @@ async function loadEmployees() {
 
   } catch (error) {
     console.error('Failed to load employees:', error)
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
+
 
 async function loadDepartmentsAndProfessions() {
   try {
@@ -52,10 +56,10 @@ async function loadDepartmentsAndProfessions() {
       departmentService.getAll(),
       professionService.getAll()
     ]);
-    departments.value = depsResponse.body;
-    professions.value = profsResponse.body;
+    departments.value = depsResponse
+    professions.value = profsResponse
   } catch (error) {
-    console.error('Failed to load departments or professions:', error);
+    console.error('Failed to load departments or professions:', error)
   }
 }
 
@@ -67,11 +71,16 @@ async function saveEmployee(employee: Employee) {
       await employeeService.create(employee)
     }
     await loadEmployees()
-    showForm.value = false
-    editingEmployee.value = null
+    closeForm()
   } catch (error) {
     console.error('Failed to save employee:', error)
   }
+}
+
+function closeForm() {
+  showForm.value = false
+  editingEmployee.value = null
+  formEmployee.value = createNewEmployee()
 }
 
 async function deleteEmployee(id: number) {
@@ -87,13 +96,19 @@ async function deleteEmployee(id: number) {
 
 function editEmployee(employee: Employee) {
   editingEmployee.value = { ...employee }
+  formEmployee.value = { ...employee }
+  showForm.value = true
+}
+function showAddForm() {
+  formEmployee.value = createNewEmployee()
+  editingEmployee.value = null
   showForm.value = true
 }
 
 onMounted(() => {
-  loadEmployees();
-  loadDepartmentsAndProfessions();
-});
+  loadEmployees()
+  loadDepartmentsAndProfessions()
+})
 </script>
 
 <template>
@@ -101,7 +116,7 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold">Сотрудники</h1>
       <button
-          @click="showForm = true"
+          @click="showAddForm"
           class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
       >
         Добавить сотрудника
@@ -149,11 +164,11 @@ onMounted(() => {
         <h2 class="text-xl font-bold mb-4">
           {{ editingEmployee ? 'Изменить сотрудника' : 'Добавить сотрудника' }}
         </h2>
-        <form @submit.prevent="saveEmployee(editingEmployee || newEmployee)">
+        <form @submit.prevent="saveEmployee(formEmployee)">
           <div class="mb-4">
             <label class="block mb-2">ФИО</label>
             <input
-                v-model="(editingEmployee || newEmployee).fullName"
+                v-model="formEmployee.fullName"
                 required
                 class="w-full border p-2 rounded"
             />
@@ -161,7 +176,7 @@ onMounted(() => {
           <div class="mb-4">
             <label class="block mb-2">Отдел</label>
             <select
-                v-model="(editingEmployee || newEmployee).departmentId"
+                v-model="formEmployee.departmentId"
                 required
                 class="w-full border p-2 rounded"
             >
@@ -177,7 +192,7 @@ onMounted(() => {
           <div class="mb-4">
             <label class="block mb-2">Профессия</label>
             <select
-                v-model="(editingEmployee || newEmployee).professionId"
+                v-model="formEmployee.professionId"
                 required
                 class="w-full border p-2 rounded"
             >
@@ -194,14 +209,14 @@ onMounted(() => {
           <div class="mb-4">
             <label class="block mb-2">Примечание</label>
             <textarea
-                v-model="(editingEmployee || newEmployee).notes"
+                v-model="formEmployee.notes"
                 class="w-full border p-2 rounded"
             />
           </div>
           <div class="flex justify-end gap-2">
             <button
                 type="button"
-                @click="showForm = false"
+                @click="closeForm"
                 class="px-4 py-2 border rounded"
             >
               Отмена

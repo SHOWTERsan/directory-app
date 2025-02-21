@@ -8,7 +8,7 @@ import ru.showter.directoryappapi.model.Department;
 @Repository
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
-    List<Department> findDepartmentByParentIsNull();
+    List<Department> findByIdNot(Long id);
 
     List<Department> findByParentId(Long parentId);
 }

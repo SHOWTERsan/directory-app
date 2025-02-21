@@ -28,9 +28,9 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentService.getAllDepartments());
     }
 
-    @GetMapping("/parent")
-    public ResponseEntity<List<DepartmentDto>> getParentDepartments() {
-        return ResponseEntity.ok(departmentService.getParentDepartments());
+    @GetMapping("/parent/{excludeId}")
+    public ResponseEntity<List<DepartmentDto>> getParentDepartmentsExcluding(@PathVariable(required = false) Long excludeId) {
+        return ResponseEntity.ok(departmentService.getParentDepartmentsExcluding(excludeId));
     }
 
     @GetMapping("/children/{parentId}")

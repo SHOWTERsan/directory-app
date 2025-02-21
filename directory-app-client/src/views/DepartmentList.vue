@@ -1,31 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { Department } from '../domain/Department.ts';
+import type { Department } from '../domain/Department.ts'
 import { DepartmentService } from '../services/department-service.ts'
 
 const departmentService = new DepartmentService()
 
 const departments = ref<Department[]>([])
-const parentDepartments = ref<Department[]>([])
+const formParentDepartments = ref<Department[]>([])
+
 const showForm = ref(false)
 const editingDepartment = ref<Department | null>(null)
 const loading = ref(false)
 
-const newDepartment: Department = {
-  name: '',
-  notes: '',
-  parentId: undefined
+function createNewDepartment(): Department {
+  return {
+    name: '',
+    notes: '',
+    parentId: undefined
+  }
 }
+
+const formDepartment = ref<Department>(createNewDepartment())
 
 async function loadDepartments() {
   loading.value = true
   try {
-    const [depsResponse, parentDepsResponse] = await Promise.all([
-      departmentService.getAll(),
-      departmentService.getParentDepartments()
-    ])
-    departments.value = depsResponse
-    parentDepartments.value = parentDepsResponse
+    departments.value = await departmentService.getAll()
   } catch (error) {
     console.error('Failed to load departments:', error)
   }
@@ -35,16 +35,22 @@ async function loadDepartments() {
 async function saveDepartment(department: Department) {
   try {
     if (editingDepartment.value?.id) {
-      await departmentService.update(editingDepartment.value.id, department);
+      await departmentService.update(editingDepartment.value.id, department)
     } else {
-      await departmentService.create(department);
+      await departmentService.create(department)
     }
     await loadDepartments()
-    showForm.value = false
-    editingDepartment.value = null
+    closeForm()
   } catch (error) {
     console.error('Failed to save department:', error)
   }
+}
+
+function closeForm() {
+  showForm.value = false
+  editingDepartment.value = null
+  formDepartment.value = createNewDepartment()
+  formParentDepartments.value = departments.value
 }
 
 async function deleteDepartment(id: number) {
@@ -58,8 +64,23 @@ async function deleteDepartment(id: number) {
   }
 }
 
-function editDepartment(department: Department) {
+async function editDepartment(department: Department) {
   editingDepartment.value = { ...department }
+  formDepartment.value = { ...department }
+  try {
+    formParentDepartments.value = await departmentService.getParentDepartmentsExcluding(
+        department.id!
+    )
+  } catch (error) {
+    console.error('Failed to load form parent departments:', error)
+  }
+  showForm.value = true
+}
+
+function showAddForm() {
+  formDepartment.value = createNewDepartment()
+  editingDepartment.value = null
+  formParentDepartments.value = departments.value
   showForm.value = true
 }
 
@@ -71,7 +92,7 @@ onMounted(loadDepartments)
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold">Отделы</h1>
       <button
-          @click="showForm = true"
+          @click="showAddForm"
           class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
       >
         Добавить отдел
@@ -90,9 +111,13 @@ onMounted(loadDepartments)
       </tr>
       </thead>
       <tbody>
-      <tr v-for="department in departments" :key="department.id" class="hover:bg-gray-50">
+      <tr
+          v-for="department in departments"
+          :key="department.id"
+          class="hover:bg-gray-50"
+      >
         <td class="px-6 py-4 border-b">
-          {{ parentDepartments.find(d => d.id === department.parentId)?.name || '-' }}
+          {{ departments.find(p => p.id === department.parentId)?.name || '-' }}
         </td>
         <td class="px-6 py-4 border-b">{{ department.name }}</td>
         <td class="px-6 py-4 border-b">{{ department.notes }}</td>
@@ -114,21 +139,21 @@ onMounted(loadDepartments)
       </tbody>
     </table>
 
-    <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div
+        v-if="showForm"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    >
       <div class="bg-white p-6 rounded-lg w-full max-w-md">
         <h2 class="text-xl font-bold mb-4">
           {{ editingDepartment ? 'Изменить отдел' : 'Добавить отдел' }}
         </h2>
-        <form @submit.prevent="saveDepartment(editingDepartment || newDepartment)">
+        <form @submit.prevent="saveDepartment(formDepartment)">
           <div class="mb-4">
             <label class="block mb-2">Родительский отдел</label>
-            <select
-                v-model="(editingDepartment || newDepartment).parentId"
-                class="w-full border p-2 rounded"
-            >
+            <select v-model="formDepartment.parentId" class="w-full border p-2 rounded">
               <option :value="undefined">-</option>
               <option
-                  v-for="parent in parentDepartments"
+                  v-for="parent in formParentDepartments"
                   :key="parent.id"
                   :value="parent.id"
               >
@@ -139,7 +164,7 @@ onMounted(loadDepartments)
           <div class="mb-4">
             <label class="block mb-2">Наименование</label>
             <input
-                v-model="(editingDepartment || newDepartment).name"
+                v-model="formDepartment.name"
                 required
                 class="w-full border p-2 rounded"
             />
@@ -147,14 +172,14 @@ onMounted(loadDepartments)
           <div class="mb-4">
             <label class="block mb-2">Примечание</label>
             <textarea
-                v-model="(editingDepartment || newDepartment).notes"
+                v-model="formDepartment.notes"
                 class="w-full border p-2 rounded"
             />
           </div>
           <div class="flex justify-end gap-2">
             <button
                 type="button"
-                @click="showForm = false"
+                @click="closeForm"
                 class="px-4 py-2 border rounded"
             >
               Отмена

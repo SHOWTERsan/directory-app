@@ -10,10 +10,14 @@ const showForm = ref(false)
 const editingProfession = ref<Profession | null>(null)
 const loading = ref(false)
 
-const newProfession: Profession = {
-  name: '',
-  notes: ''
+function createNewProfession(): Profession {
+  return {
+    name: '',
+    notes: ''
+  }
 }
+
+const formProfession = ref<Profession>(createNewProfession())
 
 async function loadProfessions() {
   loading.value = true
@@ -28,17 +32,21 @@ async function loadProfessions() {
 async function saveProfession(profession: Profession) {
   try {
     if (editingProfession.value?.id) {
-      await professionService.update(editingProfession.value.id, profession);
-
+      await professionService.update(editingProfession.value.id, profession)
     } else {
-      await professionService.create(profession);
+      await professionService.create(profession)
     }
     await loadProfessions()
-    showForm.value = false
-    editingProfession.value = null
+    closeForm()
   } catch (error) {
     console.error('Failed to save profession:', error)
   }
+}
+
+function closeForm() {
+  showForm.value = false
+  editingProfession.value = null
+  formProfession.value = createNewProfession()
 }
 
 async function deleteProfession(id: number) {
@@ -54,6 +62,13 @@ async function deleteProfession(id: number) {
 
 function editProfession(profession: Profession) {
   editingProfession.value = { ...profession }
+  formProfession.value = { ...profession }
+  showForm.value = true
+}
+
+function showAddForm() {
+  formProfession.value = createNewProfession()
+  editingProfession.value = null
   showForm.value = true
 }
 
@@ -65,7 +80,7 @@ onMounted(loadProfessions)
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold">Профессии</h1>
       <button
-          @click="showForm = true"
+          @click="showAddForm"
           class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
       >
         Добавить профессию
@@ -109,11 +124,11 @@ onMounted(loadProfessions)
         <h2 class="text-xl font-bold mb-4">
           {{ editingProfession ? 'Изменить профессию' : 'Добавить профессию' }}
         </h2>
-        <form @submit.prevent="saveProfession(editingProfession || newProfession)">
+        <form @submit.prevent="saveProfession(formProfession)">
           <div class="mb-4">
             <label class="block mb-2">Наименование</label>
             <input
-                v-model="(editingProfession || newProfession).name"
+                v-model="formProfession.name"
                 required
                 class="w-full border p-2 rounded"
             />
@@ -121,14 +136,14 @@ onMounted(loadProfessions)
           <div class="mb-4">
             <label class="block mb-2">Примечание</label>
             <textarea
-                v-model="(editingProfession || newProfession).notes"
+                v-model="formProfession.notes"
                 class="w-full border p-2 rounded"
             />
           </div>
           <div class="flex justify-end gap-2">
             <button
                 type="button"
-                @click="showForm = false"
+                @click="closeForm"
                 class="px-4 py-2 border rounded"
             >
               Отмена

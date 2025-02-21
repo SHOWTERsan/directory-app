@@ -6,8 +6,8 @@ export class DepartmentService extends BaseService {
         return this.request<Department[]>('/departments');
     }
 
-    async getParentDepartments(): Promise<Department[]> {
-        return this.request<Department[]>('/departments/parent');
+    async getParentDepartmentsExcluding(excludeId: number): Promise<Department[]> {
+        return this.request<Department[]>(`/departments/parent/${excludeId}`);
     }
 
     async getChildDepartments(parentId: number): Promise<Department[]> {

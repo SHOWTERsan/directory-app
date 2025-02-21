@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type { Employee } from '../domain/Employee.ts'
-import { apiClient } from '../logic/api-client.ts'
-import type { Department } from '../domain/Department.ts'
-import type { Profession } from '../domain/Profession.ts'
+import {onMounted, ref} from 'vue'
+import type {Employee} from '../domain/Employee.ts'
+import type {Department} from '../domain/Department.ts'
+import type {Profession} from '../domain/Profession.ts'
+import {EmployeeService} from '../services/employee-service.ts'
+import {DepartmentService} from "../services/department-service.ts"
+import {ProfessionService} from '../services/profession-service.ts'
 
+const employeeService = new EmployeeService()
+const departmentService = new DepartmentService()
+const professionService = new ProfessionService()
 
 const employees = ref<Employee[]>([])
 const showForm = ref(false)
@@ -25,15 +30,14 @@ const newEmployee: Employee = {
 async function loadEmployees() {
   loading.value = true
   try {
-    const response = await apiClient.oas['employee-controller'].getAllEmployees()
-    employees.value = response.body
+    employees.value = await employeeService.getAll()
 
     for (const employee of employees.value) {
-      const departmentResponse = await apiClient.oas['department-controller'].getDepartmentById({id: employee.departmentId})
-      employee.departmentName = departmentResponse.body.name
+      const departmentResponse = await departmentService.getById(employee.departmentId)
+      employee.departmentName = departmentResponse.name
 
-      const professionResponse = await apiClient.oas['profession-controller'].getProfessionById({id: employee.professionId})
-      employee.professionName = professionResponse.body.name
+      const professionResponse = await professionService.getById(employee.professionId)
+      employee.professionName = professionResponse.name
     }
 
   } catch (error) {
@@ -45,8 +49,8 @@ async function loadEmployees() {
 async function loadDepartmentsAndProfessions() {
   try {
     const [depsResponse, profsResponse] = await Promise.all([
-      apiClient.oas['department-controller'].getAllDepartments(),
-      apiClient.oas['profession-controller'].getAllProfessions()
+      departmentService.getAll(),
+      professionService.getAll()
     ]);
     departments.value = depsResponse.body;
     professions.value = profsResponse.body;
@@ -58,14 +62,9 @@ async function loadDepartmentsAndProfessions() {
 async function saveEmployee(employee: Employee) {
   try {
     if (editingEmployee.value?.id) {
-      await apiClient.oas['employee-controller'].updateEmployee({
-        id: editingEmployee.value.id,
-        requestBody: employee
-      })
+      await employeeService.update(editingEmployee.value.id, employee)
     } else {
-      await apiClient.oas['employee-controller'].createEmployee({
-        requestBody: employee
-      })
+      await employeeService.create(employee)
     }
     await loadEmployees()
     showForm.value = false
@@ -78,7 +77,7 @@ async function saveEmployee(employee: Employee) {
 async function deleteEmployee(id: number) {
   if (confirm('Вы уверены, что хотите удалить этого сотрудника?')) {
     try {
-      await apiClient.oas['employee-controller'].deleteEmployee({ id })
+      await employeeService.delete(id)
       await loadEmployees()
     } catch (error) {
       console.error('Failed to delete employee:', error)

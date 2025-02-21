@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type { Profession } from '../domain/Profession.ts';
-import { apiClient } from '../logic/api-client.ts';
+import {onMounted, ref} from 'vue'
+import type {Profession} from '../domain/Profession.ts'
+import {ProfessionService} from '../services/profession-service.ts'
+
+const professionService = new ProfessionService()
 
 const professions = ref<Profession[]>([])
 const showForm = ref(false)
@@ -16,8 +18,7 @@ const newProfession: Profession = {
 async function loadProfessions() {
   loading.value = true
   try {
-    const response = await apiClient.oas['profession-controller'].getAllProfessions()
-    professions.value = response.body
+    professions.value = await professionService.getAll()
   } catch (error) {
     console.error('Failed to load professions:', error)
   }
@@ -27,14 +28,10 @@ async function loadProfessions() {
 async function saveProfession(profession: Profession) {
   try {
     if (editingProfession.value?.id) {
-      await apiClient.oas['profession-controller'].updateProfession({
-        id: editingProfession.value.id,
-        requestBody: profession
-      })
+      await professionService.update(editingProfession.value.id, profession);
+
     } else {
-      await apiClient.oas['profession-controller'].createProfession({
-        requestBody: profession
-      })
+      await professionService.create(profession);
     }
     await loadProfessions()
     showForm.value = false
@@ -47,7 +44,7 @@ async function saveProfession(profession: Profession) {
 async function deleteProfession(id: number) {
   if (confirm('Вы уверены, что хотите удалить эту профессию?')) {
     try {
-      await apiClient.oas['profession-controller'].deleteProfession({ id })
+      await professionService.delete(id)
       await loadProfessions()
     } catch (error) {
       console.error('Failed to delete profession:', error)
@@ -107,7 +104,6 @@ onMounted(loadProfessions)
       </tbody>
     </table>
 
-    <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div class="bg-white p-6 rounded-lg w-full max-w-md">
         <h2 class="text-xl font-bold mb-4">

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { Department } from '../domain/Department.ts';
-import { apiClient } from '../logic/api-client.ts';
+import { DepartmentService } from '../services/department-service.ts'
+
+const departmentService = new DepartmentService()
 
 const departments = ref<Department[]>([])
 const parentDepartments = ref<Department[]>([])
@@ -19,11 +21,11 @@ async function loadDepartments() {
   loading.value = true
   try {
     const [depsResponse, parentDepsResponse] = await Promise.all([
-      apiClient.oas['department-controller'].getAllDepartments(),
-      apiClient.oas['department-controller'].getParentDepartments()
+      departmentService.getAll(),
+      departmentService.getParentDepartments()
     ])
-    departments.value = depsResponse.body
-    parentDepartments.value = parentDepsResponse.body
+    departments.value = depsResponse
+    parentDepartments.value = parentDepsResponse
   } catch (error) {
     console.error('Failed to load departments:', error)
   }
@@ -33,14 +35,9 @@ async function loadDepartments() {
 async function saveDepartment(department: Department) {
   try {
     if (editingDepartment.value?.id) {
-      await apiClient.oas['department-controller'].updateDepartment({
-        id: editingDepartment.value.id,
-        requestBody: department
-      })
+      await departmentService.update(editingDepartment.value.id, department);
     } else {
-      await apiClient.oas['department-controller'].createDepartment({
-        requestBody: department
-      })
+      await departmentService.create(department);
     }
     await loadDepartments()
     showForm.value = false
@@ -53,7 +50,7 @@ async function saveDepartment(department: Department) {
 async function deleteDepartment(id: number) {
   if (confirm('Вы уверены, что хотите удалить этот отдел?')) {
     try {
-      await apiClient.oas['department-controller'].deleteDepartment({ id })
+      await departmentService.delete(id)
       await loadDepartments()
     } catch (error) {
       console.error('Failed to delete department:', error)
@@ -117,7 +114,6 @@ onMounted(loadDepartments)
       </tbody>
     </table>
 
-    <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div class="bg-white p-6 rounded-lg w-full max-w-md">
         <h2 class="text-xl font-bold mb-4">

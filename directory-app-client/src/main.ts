@@ -1,13 +1,9 @@
 import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
-import router from './plugins/router.ts';
-import { apiClient } from './logic/api-client.ts';
+import router from "./plugins/router.ts";
 
-(async () => {
-    await apiClient.initialize();
+const app = createApp(App)
 
-    const app = createApp(App);
-    app.use(router);
-    app.mount('#app');
-})();
+app.use(router)
+app.mount('#app')
